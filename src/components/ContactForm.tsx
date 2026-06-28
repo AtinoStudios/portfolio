@@ -1,7 +1,8 @@
 "use client";
 
-import { Loader2, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { site } from "@/lib/data";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
@@ -16,41 +17,32 @@ export function ContactForm() {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const name = String(formData.get("name") || "").trim();
+    const email = String(formData.get("email") || "").trim();
+    const projectType = String(formData.get("projectType") || "Unity project").trim();
+    const messageText = String(formData.get("message") || "").trim();
 
-    try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(Object.fromEntries(formData)),
-      });
-
-      const result = (await response.json()) as {
-        ok?: boolean;
-        message?: string;
-        mailto?: string;
-      };
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.message || "Unable to send message.");
-      }
-
-      setStatus("success");
-      setMessage(result.message || "Message prepared.");
-      form.reset();
-
-      if (result.mailto) {
-        window.location.href = result.mailto;
-      }
-    } catch (error) {
+    if (name.length < 2 || !email.includes("@") || messageText.length < 20) {
       setStatus("error");
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please email directly.",
-      );
+      setMessage("Please complete the form with a valid email and project detail.");
+      return;
     }
+
+    const subject = `Portfolio inquiry: ${projectType}`;
+    const body = [
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Project type: ${projectType}`,
+      "",
+      messageText,
+    ].join("\n");
+
+    setStatus("success");
+    setMessage("Your email app is opening with the inquiry ready.");
+    form.reset();
+    window.location.href = `mailto:${site.email}?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
   }
 
   return (
@@ -83,7 +75,7 @@ export function ContactForm() {
         />
       </label>
       <button className="button primary" type="submit" disabled={status === "loading"}>
-        {status === "loading" ? <Loader2 className="spin" size={18} /> : <Send size={18} />}
+        <Send size={18} />
         Send inquiry
       </button>
       {message ? (
